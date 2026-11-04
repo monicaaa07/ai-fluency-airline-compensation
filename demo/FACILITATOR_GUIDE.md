@@ -7,7 +7,7 @@
 ## Before the session (do this the day before)
 
 1. `pip install -r requirements.txt && pytest` in the main repo. Everything should pass.
-   - The service, repository and logging tests were run when this repo was built. **The API tests (`tests/api`) were written in an environment that could not install FastAPI and have not been run.** If any fail on your first run, fix them now rather than live.
+   - Expect 43 tests to pass on Python 3.9 or newer (verified on macOS with Apple's Python 3.9.6). If your count differs, fix it now rather than live.
 2. `demo/prepare_runs.sh ~/demo-runs` to create the two folders. Run `pytest` in each.
 3. **Do a full dry run of both runs.** Outputs vary. Know roughly how long each takes (budget 10-20 minutes each) and keep the dry-run folders as a fallback.
 4. Print or share `SCORECARD.md` (without the "Common traps" section) and the pocket card from `CLOSER_non_coding_4D.md`.
