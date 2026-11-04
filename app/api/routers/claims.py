@@ -1,6 +1,8 @@
 """Routers are thin: parse input, call one service method, shape the output."""
 from __future__ import annotations
 
+from typing import Optional
+
 from fastapi import APIRouter
 
 from app.api.deps import ContainerDep, CurrentStaff
@@ -27,7 +29,7 @@ async def file_claim(body: ClaimCreate, container: ContainerDep, staff: CurrentS
 async def list_claims(
     container: ContainerDep,
     staff: CurrentStaff,
-    status: ClaimStatus | None = None,
+    status: Optional[ClaimStatus] = None,  # Optional, not "| None": FastAPI evaluates this at runtime (Python 3.9)
     limit: int = 50,
     offset: int = 0,
 ) -> ClaimList:

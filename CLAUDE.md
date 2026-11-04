@@ -1,7 +1,8 @@
 # Airline Compensation Service
 
 FastAPI service that tracks flight disruptions ("incidents") and the compensation
-claims staff file for affected passengers. Python 3.12, SQLite, pytest.
+claims staff file for affected passengers. Python 3.9+, SQLite, pytest.
+Use `Optional[X]` rather than `X | None` in anything FastAPI or pydantic reads at runtime (route parameters, pydantic models).
 
 ## Commands
 
