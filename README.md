@@ -50,6 +50,7 @@ Demo staff (send as the `X-Staff-Id` header): 1 Alice (agent), 2 Ben (agent), 3 
 1. Read `demo/FACILITATOR_GUIDE.md`.
 2. `demo/prepare_runs.sh ~/demo-runs` creates two clean folders, `run-a-one-line` and `run-b-4d`.
 3. Follow `demo/RUN_A_one_line_prompt.md`, then `demo/RUN_B_4D_playbook.md`.
-4. Score both with `demo/SCORECARD.md`, then finish with `demo/CLOSER_non_coding_4D.md`.
+4. Score both. Either watch them side by side in the live console (`demo/visual/`, set-up steps in the facilitator guide) or fill in `demo/SCORECARD.md`.
+5. Finish with `demo/CLOSER_non_coding_4D.md`.
 
 > The `demo/` folder reveals the hidden rules the demo tests for. It is deliberately **not** copied into the run folders.

@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Run A and Run B, side by side</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #E9EDF2;
+  --paper: #FFFFFF;
+  --ink: #13233A;
+  --muted: #546378;
+  --line: #C9D2DD;
+  --ok: #0B7A5A;
+  --ok-bg: #E4F4ED;
+  --bad: #B8232F;
+  --bad-bg: #FBE9EB;
+  --lane-a: #A8620A;
+  --lane-b: #1E5BB8;
+  --focus: #1E5BB8;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0E1624;
+    --paper: #162133;
+    --ink: #EAF0F8;
+    --muted: #9CAABF;
+    --line: #2B3A52;
+    --ok: #52D3A3;
+    --ok-bg: #123329;
+    --bad: #FF8E97;
+    --bad-bg: #3A1B21;
+    --lane-a: #F0A64A;
+    --lane-b: #7FB1FF;
+    --focus: #7FB1FF;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 clamp(15px, 1.05vw, 17px) / 1.45 "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.board { max-width: 1280px; margin: 0 auto; padding: 28px 16px 80px; }
+
+h1 {
+  margin: 0 0 8px;
+  font: 700 clamp(2.1rem, 4.4vw, 3.4rem) / 1 "Barlow Condensed", "Arial Narrow", sans-serif;
+  letter-spacing: 0.005em;
+}
+.lede { margin: 0 0 20px; max-width: 62ch; color: var(--muted); }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 14px; }
+button.run {
+  appearance: none;
+  border: 0;
+  border-radius: 6px;
+  background: var(--ink);
+  color: var(--paper);
+  font: 600 1.05rem / 1 "Barlow", system-ui, sans-serif;
+  padding: 13px 20px;
+  cursor: pointer;
+}
+button.run:disabled { opacity: 0.55; cursor: progress; }
+button.run:focus-visible, a:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--paper);
+  padding: 6px 12px; font-size: 0.92rem; color: var(--muted);
+}
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
+.pill.up .dot { background: var(--ok); }
+.pill.down .dot { background: var(--bad); }
+
+.notice {
+  margin: 0 0 18px; padding: 14px 16px; border-radius: 6px;
+  border: 1px solid var(--bad); background: var(--bad-bg); color: var(--ink);
+}
+.notice[hidden] { display: none; }
+.notice p { margin: 0 0 8px; }
+.notice p:last-child { margin: 0; }
+.notice code {
+  display: block; margin-top: 6px; padding: 8px 10px; border-radius: 4px;
+  background: var(--paper); border: 1px solid var(--line);
+  font: 500 0.85rem / 1.4 ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere;
+}
+
+.cols, .row { display: grid; grid-template-columns: minmax(200px, 1.05fr) minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.heads { margin-bottom: 8px; align-items: end; }
+.heads-note { color: var(--muted); font-size: 0.95rem; padding-bottom: 6px; }
+
+.lane-head {
+  background: var(--paper); border-radius: 6px; padding: 12px 14px 14px;
+  border: 1px solid var(--line); border-top-width: 6px;
+}
+.lane-head.a { border-top-color: var(--lane-a); }
+.lane-head.b { border-top-color: var(--lane-b); }
+.lane-name { font: 700 1.5rem / 1.1 "Barlow Condensed", "Arial Narrow", sans-serif; }
+.lane-name span { font: 500 1rem "Barlow", system-ui, sans-serif; color: var(--muted); margin-left: 6px; }
+.tally { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; }
+.tally b { font: 700 clamp(2.4rem, 4vw, 3.4rem) / 1 "Barlow Condensed", "Arial Narrow", sans-serif; }
+.tally span { color: var(--muted); font-size: 0.95rem; }
+.bar { height: 6px; border-radius: 3px; background: var(--line); margin-top: 8px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--ok); transition: width 0.4s ease; }
+
+.row { padding: 14px 0; border-top: 1px solid var(--line); align-items: start; }
+.situation h2 { margin: 0 0 4px; font-size: 1.08rem; font-weight: 600; line-height: 1.25; }
+.situation p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+
+.cell {
+  min-height: 92px; padding: 12px 14px; border-radius: 6px;
+  background: var(--paper); border: 1px solid var(--line); border-left-width: 5px;
+}
+.cell.wait { color: var(--muted); }
+.cell.run { color: var(--muted); }
+.cell.run::after { content: "Running"; }
+.cell.ok { border-left-color: var(--ok); background: var(--ok-bg); }
+.cell.bad { border-left-color: var(--bad); background: var(--bad-bg); }
+
+.stamp {
+  display: inline-flex; align-items: center; gap: 7px;
+  font: 700 1.3rem / 1 "Barlow Condensed", "Arial Narrow", sans-serif; letter-spacing: 0.02em;
+  border: 2px solid currentColor; border-radius: 4px; padding: 4px 10px 3px;
+  transform: rotate(-2deg);
+}
+.ok .stamp { color: var(--ok); }
+.bad .stamp { color: var(--bad); }
+.stamp.land { animation: land 0.34s cubic-bezier(0.2, 1.5, 0.4, 1); }
+@keyframes land {
+  from { transform: rotate(-2deg) scale(1.6); opacity: 0; }
+  to   { transform: rotate(-2deg) scale(1);   opacity: 1; }
+}
+.fact { margin-top: 9px; font-weight: 600; }
+.msg {
+  margin-top: 3px; color: var(--muted); font-size: 0.9rem;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.chips { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 0.85rem; border-radius: 999px; padding: 2px 10px; border: 1px solid var(--line); background: var(--paper); }
+.chip.has { color: var(--ok); border-color: var(--ok); }
+.chip.lack { color: var(--bad); border-color: var(--bad); }
+
+.summary { margin-top: 22px; padding: 16px 18px; border-radius: 6px; background: var(--paper); border: 1px solid var(--line); }
+.summary[hidden] { display: none; }
+.summary h2 { margin: 0 0 6px; font: 700 1.7rem / 1.1 "Barlow Condensed", "Arial Narrow", sans-serif; }
+.summary p { margin: 0 0 6px; max-width: 70ch; }
+.summary ul { margin: 6px 0 0; padding-left: 1.1rem; }
+.foot { margin-top: 18px; color: var(--muted); font-size: 0.9rem; max-width: 80ch; }
+
+@media (max-width: 760px) {
+  .cols, .row { grid-template-columns: 1fr 1fr; }
+  .situation, .heads-note { grid-column: 1 / -1; }
+  .heads-note { display: none; }
+  .stamp { font-size: 1.05rem; padding: 3px 8px 2px; white-space: nowrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stamp.land { animation: none; }
+  .bar i { transition: none; }
+}
+</style>
+</head>
+<body>
+<main class="board">
+  <h1>Run A and Run B, side by side</h1>
+  <p class="lede">The same ten situations from the compensation policy go to both running apps. Each card shows what the app really did, and whether the policy says it should.</p>
+
+  <div class="toolbar">
+    <button class="run" id="run" type="button">Run all situations</button>
+    <span class="pill" id="pill-a"><span class="dot"></span><span>Run A server</span></span>
+    <span class="pill" id="pill-b"><span class="dot"></span><span>Run B server</span></span>
+  </div>
+
+  <div class="notice" id="notice" role="status" hidden></div>
+
+  <div class="cols heads">
+    <div class="heads-note">Each situation, and what the policy says should happen</div>
+    <div class="lane-head a">
+      <div class="lane-name">Run A <span>one-line prompt</span></div>
+      <div class="tally"><b id="score-a">&ndash;</b><span id="of-a">match the policy</span></div>
+      <div class="bar"><i id="bar-a"></i></div>
+    </div>
+    <div class="lane-head b">
+      <div class="lane-name">Run B <span>4D process</span></div>
+      <div class="tally"><b id="score-b">&ndash;</b><span id="of-b">match the policy</span></div>
+      <div class="bar"><i id="bar-b"></i></div>
+    </div>
+  </div>
+
+  <div id="rows"></div>
+
+  <section class="summary" id="summary" hidden aria-live="polite"></section>
+
+  <p class="foot">Results come from the two running apps, not from a script of expected answers. "Policy" means docs/COMPENSATION_POLICY.md. A card only checks the outcome, so two apps can both be blocked for different reasons; read the small text under each stamp.</p>
+</main>
+
+<script>
+"use strict";
+
+const STAFF = { alice: 1, ben: 2, sam: 3, maya: 4 };   // agent, agent, supervisor, manager
+const SIDES = ["a", "b"];
+const REASON_OK = "Not covered by the compensation policy";
+
+/* ---------- small helpers ---------- */
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const rnd = (n) => String(Math.floor(Math.random() * 10 ** n)).padStart(n, "0");
+function el(tag, cls, text) {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+class SetupError extends Error { constructor(message, response) { super(message); this.response = response; } }
+
+async function call(side, method, path, staff, body) {
+  const init = { method, headers: {} };
+  if (staff) init.headers["X-Staff-Id"] = String(staff);
+  if (body !== undefined) { init.headers["Content-Type"] = "application/json"; init.body = JSON.stringify(body); }
+  let res;
+  try { res = await fetch(`/api/${side}${path}`, init); }
+  catch (e) { return { status: 0, text: String(e), json: { proxy_error: String(e) } }; }
+  const text = await res.text();
+  let json = null;
+  try { json = JSON.parse(text); } catch (_) { /* not JSON */ }
+  return { status: res.status, text, json };
+}
+
+function errMessage(r) {
+  const j = r.json;
+  if (j && j.proxy_error) return j.proxy_error;
+  if (j && j.error && j.error.message) return j.error.message;
+  if (j && typeof j.detail === "string") return j.detail;
+  if (j && Array.isArray(j.detail)) return "The request was not valid.";
+  return (r.text || "").slice(0, 160);
+}
+
+/* ---------- finding the approve / reject / history endpoints ---------- */
+async function discover(side) {
+  const r = await call(side, "GET", "/openapi.json");
+  if (r.status !== 200 || !r.json || !r.json.paths) return null;
+  const find = (re, method) => {
+    for (const [path, ops] of Object.entries(r.json.paths)) if (re.test(path) && ops[method]) return { path, op: ops[method] };
+    return null;
+  };
+  return {
+    spec: r.json,
+    approve: find(/\/claims\/\{[^}]+\}\/approve$/, "post"),
+    reject: find(/\/claims\/\{[^}]+\}\/reject$/, "post"),
+    history: find(/\/claims\/\{[^}]+\}\/history$/, "get"),
+  };
+}
+const resolveRef = (spec, s) => (s && s.$ref ? spec.components.schemas[s.$ref.split("/").pop()] : s);
+const isStringProp = (p) => !!p && (p.type === "string" || (p.anyOf || []).some((x) => x.type === "string"));
+const TEXT_KEYS = ["reason", "note", "comment", "message"];
+
+/* Build the request for approve or reject from the app's own published schema. */
+function buildAction(ep, spec, id, textValue) {
+  const content = ep.op.requestBody && ep.op.requestBody.content && ep.op.requestBody.content["application/json"];
+  const schema = content ? resolveRef(spec, content.schema) : null;
+  let path = ep.path.replace(/\{[^}]+\}/, String(id));
+  if (schema) {
+    const props = schema.properties || {};
+    const body = {};
+    for (const k of schema.required || []) body[k] = isStringProp(props[k]) ? "Checked and confirmed" : null;
+    const key = TEXT_KEYS.find((k) => k in props) || Object.keys(props).find((k) => isStringProp(props[k]));
+    if (key && textValue !== undefined) body[key] = textValue;
+    return { path, body };
+  }
+  const q = (ep.op.parameters || []).find((p) => p.in === "query" && TEXT_KEYS.includes(p.name));
+  if (q && textValue !== undefined) path += `?${q.name}=${encodeURIComponent(textValue)}`;
+  return { path, body: undefined };
+}
+
+const state = { found: { a: null, b: null } };
+
+async function decide(side, kind, id, staff, text) {
+  const f = state.found[side];
+  const ep = f && f[kind];
+  if (!ep) return { missing: true, what: `This app has no "${kind}" endpoint.` };
+  const { path, body } = buildAction(ep, f.spec, id, text);
+  return call(side, "POST", path, staff, body);
+}
+async function readHistory(side, id, staff) {
+  const f = state.found[side];
+  if (!f || !f.history) return { missing: true, what: 'This app has no "history" endpoint.' };
+  return call(side, "GET", f.history.path.replace(/\{[^}]+\}/, String(id)), staff);
+}
+
+/* ---------- setting up a claim to act on ---------- */
+async function makeClaim(side, filer, amountCents) {
+  const passport = "PX" + rnd(8);
+  const inc = await call(side, "POST", "/incidents", STAFF.alice,
+    { flight_number: "BA" + rnd(3), flight_date: "2026-01-10", kind: "cancellation" });
+  if (inc.status !== 201) throw new SetupError("Could not create an incident.", inc);
+  const body = { incident_id: inc.json.id, passenger_name: "Jo Passenger", passport_number: passport,
+                 amount_cents: amountCents, reason: "Flight cancelled with under 24 hours notice" };
+  const cl = await call(side, "POST", "/claims", filer, body);
+  if (cl.status !== 201) throw new SetupError("Could not file the claim.", cl);
+  return { id: cl.json.id, incidentId: inc.json.id, passport, raw: cl, body };
+}
+async function approvedClaim(side, filer, amountCents) {
+  const c = await makeClaim(side, filer, amountCents);
+  const ok = await decide(side, "approve", c.id, STAFF.sam);
+  if (ok.missing || ok.status < 200 || ok.status > 299) throw new SetupError("Setup could not approve the claim.", ok.missing ? { text: ok.what } : ok);
+  c.approval = ok;
+  return c;
+}
+
+/* ---------- judging an answer ---------- */
+function judge(expect, r) {
+  if (r.missing) return { ok: false, label: "Not built", detail: r.what };
+  if (r.status === 0 || (r.json && r.json.proxy_error)) return { ok: false, label: "Server not reachable", detail: errMessage(r) };
+  const allowed = r.status >= 200 && r.status < 300;
+  const blocked = r.status >= 400 && r.status < 500;
+  const label = allowed ? `Allowed (HTTP ${r.status})` : blocked ? `Blocked (HTTP ${r.status})` : `Server error (HTTP ${r.status})`;
+  const detail = allowed ? (r.json && r.json.status ? `The claim is now ${r.json.status}.` : "") : errMessage(r);
+  return { ok: expect === "allowed" ? allowed : blocked, label, detail };
+}
+
+/* ---------- the situations ---------- */
+const SCENARIOS = [
+  { id: "agent-small",
+    title: "An agent approves a $150 claim filed by a colleague",
+    policy: "Agents can decide claims up to $200.",
+    run: async (s) => { const c = await makeClaim(s, STAFF.alice, 15000); return judge("allowed", await decide(s, "approve", c.id, STAFF.ben)); } },
+  { id: "agent-big",
+    title: "An agent tries to approve a $600 claim",
+    policy: "Claims over $200 need a supervisor or manager.",
+    run: async (s) => { const c = await makeClaim(s, STAFF.alice, 60000); return judge("blocked", await decide(s, "approve", c.id, STAFF.ben)); } },
+  { id: "sup-huge",
+    title: "A supervisor tries to approve a $1,500 claim",
+    policy: "Claims over $1,000 need a manager.",
+    run: async (s) => { const c = await makeClaim(s, STAFF.alice, 150000); return judge("blocked", await decide(s, "approve", c.id, STAFF.sam)); } },
+  { id: "own-claim",
+    title: "A manager approves a claim they filed themselves",
+    policy: "Nobody decides their own claim, whatever their role.",
+    run: async (s) => { const c = await makeClaim(s, STAFF.maya, 15000); return judge("blocked", await decide(s, "approve", c.id, STAFF.maya)); } },
+  { id: "reject-blank",
+    title: "A supervisor rejects a claim and leaves the reason blank",
+    policy: "A rejection needs a written reason.",
+    run: async (s) => { const c = await makeClaim(s, STAFF.alice, 15000); return judge("blocked", await decide(s, "reject", c.id, STAFF.sam, "")); } },
+  { id: "reject-short",
+    title: "A supervisor rejects a claim with the reason “no”",
+    policy: "The reason must be at least 10 characters.",
+    run: async (s) => { const c = await makeClaim(s, STAFF.alice, 15000); return judge("blocked", await decide(s, "reject", c.id, STAFF.sam, "no")); } },
+  { id: "refile",
+    title: "Staff file a second claim for the same passenger and flight after the first is approved",
+    policy: "One compensation per passenger per incident, and approved claims count.",
+    run: async (s) => {
+      const c = await approvedClaim(s, STAFF.alice, 15000);
+      return judge("blocked", await call(s, "POST", "/claims", STAFF.alice, c.body));
+    } },
+  { id: "history-agent",
+    title: "An agent tries to read a claim’s history",
+    policy: "Only supervisors and managers can read the history.",
+    run: async (s) => { const c = await approvedClaim(s, STAFF.alice, 15000); return judge("blocked", await readHistory(s, c.id, STAFF.alice)); } },
+  { id: "audit-fields",
+    title: "What does the history record for an approval?",
+    policy: "Who acted, their role, when, the status before and after, the amount, and the note.",
+    run: async (s) => {
+      const c = await approvedClaim(s, STAFF.alice, 15000);
+      const h = await readHistory(s, c.id, STAFF.sam);
+      if (h.missing || h.status !== 200) return judge("allowed", h);
+      const j = h.json;
+      const entries = Array.isArray(j) ? j : (j && (j.items || j.entries || j.history)) || [];
+      const entry = entries.find((e) => /approved/i.test(JSON.stringify(e))) || entries[entries.length - 1];
+      if (!entry) return { ok: false, label: "History is empty", detail: "The approval left no history entry." };
+      const keys = Object.keys(entry);
+      const has = (re) => keys.some((k) => re.test(k));
+      const checks = [
+        ["Who acted", has(/actor|staff|_by$|user/i)],
+        ["Their role", has(/role/i)],
+        ["When", has(/created|_at$|time|timestamp/i)],
+        ["Status before and after", has(/from|before|prev/i) && has(/to_status|^to|after|new_status/i)],
+        ["Amount", has(/amount/i)],
+        ["Note or reason", has(/note|reason/i)],
+      ];
+      const missing = checks.filter((c2) => !c2[1]).map((c2) => c2[0]);
+      return { ok: missing.length === 0,
+               label: missing.length ? `${checks.length - missing.length} of ${checks.length} recorded` : "Everything is recorded",
+               detail: missing.length ? `Missing: ${missing.join(", ")}.` : "",
+               chips: checks.map(([name, present]) => ({ name, present })) };
+    } },
+  { id: "passport",
+    title: "Does the passport number show up in any response?",
+    policy: "Never. Responses show the last four digits only.",
+    run: async (s) => {
+      const c = await approvedClaim(s, STAFF.alice, 15000);
+      const h = await readHistory(s, c.id, STAFF.sam);
+      const bad = await call(s, "POST", "/claims", STAFF.alice, { ...c.body, amount_cents: 19.99 });
+      const looked = [["the new claim", c.raw.text], ["the approval", c.approval.text], ["the history", h.text || ""], ["an error message", bad.text]];
+      const leaks = looked.filter(([, text]) => text.includes(c.passport)).map(([name]) => name);
+      return { ok: leaks.length === 0,
+               label: leaks.length ? `Found in ${leaks.join(", ")}` : "Not found in any response",
+               detail: leaks.length ? "" : "Checked the new claim, the approval, the history and an error message." };
+    } },
+];
+
+/* ---------- drawing ---------- */
+function buildRows() {
+  const rows = document.getElementById("rows");
+  rows.replaceChildren();
+  for (const sc of SCENARIOS) {
+    const row = el("div", "row");
+    const sit = el("div", "situation");
+    sit.append(el("h2", "", sc.title), el("p", "", sc.policy));
+    row.append(sit);
+    for (const side of SIDES) {
+      const cell = el("div", "cell wait", "Waiting");
+      cell.dataset.cell = `${sc.id}-${side}`;
+      cell.setAttribute("aria-live", "polite");
+      row.append(cell);
+    }
+    rows.append(row);
+  }
+  for (const side of SIDES) {
+    document.getElementById(`score-${side}`).textContent = "–";
+    document.getElementById(`of-${side}`).textContent = "match the policy";
+    document.getElementById(`bar-${side}`).style.width = "0";
+  }
+  document.getElementById("summary").hidden = true;
+}
+const cellFor = (id, side) => document.querySelector(`[data-cell="${id}-${side}"]`);
+
+function showRunning(id) {
+  for (const side of SIDES) { const c = cellFor(id, side); c.className = "cell run"; c.replaceChildren(); }
+}
+function showResult(id, side, res) {
+  const cell = cellFor(id, side);
+  cell.className = `cell ${res.ok ? "ok" : "bad"}`;
+  cell.replaceChildren();
+  const stamp = el("div", "stamp land");
+  const mark = el("span", "", res.ok ? "✓" : "✕");
+  mark.setAttribute("aria-hidden", "true");
+  stamp.append(mark, document.createTextNode(res.ok ? "Matches policy" : "Breaks policy"));
+  cell.append(stamp, el("div", "fact", res.label));
+  if (res.detail) cell.append(el("div", "msg", res.detail));
+  if (res.chips) {
+    const ul = el("ul", "chips");
+    for (const c of res.chips) ul.append(el("li", `chip ${c.present ? "has" : "lack"}`, `${c.present ? "✓" : "✕"} ${c.name}`));
+    cell.append(ul);
+  }
+}
+function showTally(side, ok, done) {
+  document.getElementById(`score-${side}`).textContent = String(ok);
+  document.getElementById(`of-${side}`).textContent = `of ${SCENARIOS.length} match the policy`;
+  document.getElementById(`bar-${side}`).style.width = `${(ok / SCENARIOS.length) * 100}%`;
+}
+
+async function runOne(sc, side) {
+  try { return await sc.run(side); }
+  catch (e) {
+    if (e instanceof SetupError) return { ok: false, label: "Could not set this up", detail: `${e.message} ${e.response ? errMessage(e.response) : ""}`.trim() };
+    return { ok: false, label: "Something went wrong", detail: String(e) };
+  }
+}
+
+/* ---------- servers ---------- */
+let config = { a: "http://127.0.0.1:8001", b: "http://127.0.0.1:8002" };
+const START = {
+  a: "cd ~/Claude/demo-runs/run-a-one-line && source .venv/bin/activate && AIRLINE_DB_PATH=:memory: uvicorn app.main:create_app --factory --port 8001",
+  b: "cd ~/Claude/demo-runs/run-b-4d && source .venv/bin/activate && AIRLINE_DB_PATH=:memory: uvicorn app.main:create_app --factory --port 8002",
+};
+async function checkServers() {
+  const down = [];
+  for (const side of SIDES) {
+    const r = await call(side, "GET", "/health");
+    const up = r.status === 200;
+    const pill = document.getElementById(`pill-${side}`);
+    pill.className = `pill ${up ? "up" : "down"}`;
+    pill.lastElementChild.textContent = `Run ${side.toUpperCase()} server ${up ? "connected" : "not reachable"}`;
+    if (!up) down.push(side);
+  }
+  const notice = document.getElementById("notice");
+  notice.replaceChildren();
+  if (down.length) {
+    for (const side of down) {
+      const p = el("p", "", `Run ${side.toUpperCase()} is not running at ${config[side]}. Start it in another Terminal window:`);
+      p.append(el("code", "", START[side]));
+      notice.append(p);
+    }
+    notice.hidden = false;
+  } else {
+    notice.hidden = true;
+  }
+  return down.length === 0;
+}
+
+/* ---------- the run ---------- */
+let busy = false;
+async function runAll() {
+  if (busy) return;
+  busy = true;
+  const button = document.getElementById("run");
+  button.disabled = true;
+  buildRows();
+  if (!(await checkServers())) { busy = false; button.disabled = false; return; }
+  for (const side of SIDES) state.found[side] = await discover(side);
+
+  const oks = { a: 0, b: 0 };
+  const rows = [];
+  for (const sc of SCENARIOS) {
+    showRunning(sc.id);
+    const [ra, rb] = await Promise.all([runOne(sc, "a"), runOne(sc, "b")]);
+    await sleep(250);
+    showResult(sc.id, "a", ra); if (ra.ok) oks.a++; showTally("a", oks.a);
+    await sleep(260);
+    showResult(sc.id, "b", rb); if (rb.ok) oks.b++; showTally("b", oks.b);
+    rows.push({ sc, ra, rb });
+    await sleep(240);
+  }
+  summarize(oks, rows);
+  button.textContent = "Run again";
+  button.disabled = false;
+  busy = false;
+}
+
+function summarize(oks, rows) {
+  const n = SCENARIOS.length;
+  const box = document.getElementById("summary");
+  box.replaceChildren();
+  box.append(el("h2", "", `Run B matched the policy in ${oks.b} of ${n} situations. Run A matched in ${oks.a}.`));
+  const differ = rows.filter((r) => r.ra.ok !== r.rb.ok);
+  if (differ.length) {
+    box.append(el("p", "", "They differ on:"));
+    const ul = el("ul");
+    for (const r of differ) {
+      const better = r.rb.ok ? "Run B" : "Run A";
+      const joiner = /[?.!]$/.test(r.sc.title) ? " " : ". ";
+      ul.append(el("li", "", `${r.sc.title}${joiner}Only ${better} got it right.`));
+    }
+    box.append(ul);
+  } else {
+    box.append(el("p", "", "Both builds gave the same verdict on every situation. Ask the room: what would you check that these situations do not cover?"));
+  }
+  box.hidden = false;
+}
+
+document.getElementById("run").addEventListener("click", runAll);
+buildRows();
+fetch("/config").then((r) => r.json()).then((c) => { config = c; }).catch(() => {}).finally(() => {
+  checkServers();
+  if (location.search.includes("auto")) runAll();
+});
+</script>
+</body>
+</html>

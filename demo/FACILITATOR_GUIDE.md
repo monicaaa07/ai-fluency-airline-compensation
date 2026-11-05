@@ -20,8 +20,33 @@
 | 5-10 | The system | Tour the airline service (see below). One sentence per layer. Do not dive into code. |
 | 10-25 | **Run A** | One-line prompt, `RUN_A_one_line_prompt.md`. Narrate what is *not* being said. Do not rescue it. |
 | 25-45 | **Run B** | The 4D playbook, `RUN_B_4D_playbook.md`. Make the audience do the Delegation table and review the plan. |
-| 45-52 | Score | Fill `SCORECARD.md` for both runs, by show of hands per row. |
+| 45-52 | Score | Open the live side-by-side console (see below) and press **Run all situations**. Fall back to `SCORECARD.md` by show of hands if the servers will not start. |
 | 52-60 | **Closer** | The non-coding policy-memo exercise from `CLOSER_non_coding_4D.md`, then the pocket card. |
+
+## Live side-by-side console (the visual scorecard)
+
+`demo/visual/` is a browser page that sends the same ten situations to the finished Run A and Run B apps and shows what each one actually did, as green and red cards with a running tally. It changes neither app and needs only Python's standard library.
+
+It needs **both finished builds**, so set it up after both runs are done and their tests pass. Use four Terminal windows, one command each:
+
+```bash
+# 1. Run A's app
+cd ~/Claude/demo-runs/run-a-one-line && source .venv/bin/activate && AIRLINE_DB_PATH=:memory: uvicorn app.main:create_app --factory --port 8001
+
+# 2. Run B's app
+cd ~/Claude/demo-runs/run-b-4d && source .venv/bin/activate && AIRLINE_DB_PATH=:memory: uvicorn app.main:create_app --factory --port 8002
+
+# 3. The console (from the main repo folder, not a run folder)
+cd ~/Claude/ai-fluency-airline-compensation && python3 demo/visual/console.py
+```
+
+Then open http://127.0.0.1:9000 and press **Run all situations**. `AIRLINE_DB_PATH=:memory:` gives each app a fresh database every time it starts, so reruns stay clean. If an app is not running, the page shows the command to start it.
+
+Notes:
+- The page reads each app's own published API description to find the approve, reject and history endpoints, so it adapts to what each run built. If a run named things unexpectedly, that card says "Not built" or "Could not set this up", and the small text says why.
+- A card checks the **outcome** only. Two apps can both block a request for different reasons, so read the small text under each stamp.
+- The page was tested against stand-in servers while this repo was built, not against your real Run A and Run B. Do a dry run first.
+- Do not run the console from inside a run folder. Keep it in the main repo so the run folders stay free of demo files.
 
 ## The system in one minute
 
@@ -55,5 +80,6 @@
 | `RUN_A_one_line_prompt.md` | Script for Run A |
 | `RUN_B_4D_playbook.md` | Script and prompts for Run B |
 | `SCORECARD.md` | Ten situations, scoring sheet, traps, debrief |
+| `visual/` | Live side-by-side console: `console.py` and `index.html` |
 | `CLOSER_non_coding_4D.md` | Non-coding exercise and pocket card |
 | `prepare_runs.sh` | Creates clean `run-a-one-line` and `run-b-4d` folders |
